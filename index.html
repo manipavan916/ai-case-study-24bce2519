@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataMind Studio — Interactive AI & Data Science Workbench</title>
+  <meta name="description" content="A client-side interactive AI & Data Science workbench. Explore datasets, run automated EDA, visualize correlations, and train machine learning models right in the browser." />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- PapaParse for CSV parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="bg-[#090d16] text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- NAVBAR -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-[#090d16]/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i data-lucide="brain-circuit" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <span class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
+            DataMind Studio
+          </span>
+          <span class="hidden sm:inline-block ml-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            Interactive AI Lab
+          </span>
+        </div>
+      </div>
+
+      <!-- Quick Dataset Pill & Action Buttons -->
+      <div class="flex items-center space-x-3">
+        <div id="active-dataset-badge" class="hidden md:flex items-center space-x-2 px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-emerald"></span>
+          <span class="text-slate-400">Dataset:</span>
+          <span id="active-dataset-name" class="font-semibold text-slate-200">Titanic Survival</span>
+        </div>
+
+        <!-- Switch Dataset Dropdown -->
+        <div class="relative">
+          <button id="open-dataset-modal-btn" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-200 transition">
+            <i data-lucide="database" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span>Datasets</span>
+          </button>
+        </div>
+
+        <!-- Custom Upload CSV Button -->
+        <label for="csv-upload-input" class="cursor-pointer flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 transition">
+          <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+          <span>Upload CSV</span>
+          <input id="csv-upload-input" type="file" accept=".csv" class="hidden" />
+        </label>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-800/40">
+      <nav class="flex space-x-2 sm:space-x-4 overflow-x-auto py-2 text-xs font-medium no-scrollbar">
+        <button data-tab="tab-overview" class="tab-btn active px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 transition flex items-center space-x-2 whitespace-nowrap">
+          <i data-lucide="layout-grid" class="w-4 h-4"></i>
+          <span>1. Overview & Data</span>
+        </button>
+        <button data-tab="tab-eda" class="tab-btn px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 transition flex items-center space-x-2 whitespace-nowrap">
+          <i data-lucide="microscope" class="w-4 h-4"></i>
+          <span>2. Automated EDA</span>
+        </button>
+        <button data-tab="tab-visuals" class="tab-btn px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 transition flex items-center space-x-2 whitespace-nowrap">
+          <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+          <span>3. Visual Studio</span>
+        </button>
+        <button data-tab="tab-ml" class="tab-btn px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 transition flex items-center space-x-2 whitespace-nowrap">
+          <i data-lucide="cpu" class="w-4 h-4"></i>
+          <span>4. Machine Learning Arena</span>
+        </button>
+        <button data-tab="tab-simulator" class="tab-btn px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 transition flex items-center space-x-2 whitespace-nowrap">
+          <i data-lucide="sliders" class="w-4 h-4"></i>
+          <span>5. What-If Simulator</span>
+        </button>
+        <button data-tab="tab-guide" class="tab-btn px-3.5 py-1.5 rounded-lg border border-transparent text-slate-400 hover:text-slate-200 transition flex items-center space-x-2 whitespace-nowrap">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+          <span>6. Concepts Guide</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: OVERVIEW & DATA INGESTION -->
+    <!-- ========================================== -->
+    <section id="tab-overview" class="tab-pane space-y-6">
+      <!-- Hero Banner -->
+      <div class="relative overflow-hidden rounded-2xl glass-panel p-6 sm:p-8 border border-indigo-500/20 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900">
+        <div class="relative z-10 max-w-3xl">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-medium mb-3">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>No Server Required • Runs 100% Client-Side In Your Browser</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            Explore, Analyze, and Train AI Models Instantly
+          </h1>
+          <p class="mt-2 text-slate-300 text-sm leading-relaxed">
+            DataMind Studio turns machine learning concepts into hands-on interactive visualizations. Inspect feature distributions, detect data health issues, calculate correlations, train classification & regression models, and simulate predictions with real-time feedback.
+          </p>
+
+          <div class="mt-4 flex flex-wrap gap-2 text-xs">
+            <button onclick="window.app.loadDatasetById('titanic')" class="px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition flex items-center space-x-1.5">
+              <span>🚢 Titanic Survival</span>
+            </button>
+            <button onclick="window.app.loadDatasetById('housing')" class="px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition flex items-center space-x-1.5">
+              <span>🏡 House Prices</span>
+            </button>
+            <button onclick="window.app.loadDatasetById('churn')" class="px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition flex items-center space-x-1.5">
+              <span>👥 Customer Churn</span>
+            </button>
+            <button onclick="window.app.loadDatasetById('iris')" class="px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition flex items-center space-x-1.5">
+              <span>🌸 Iris Species</span>
+            </button>
+            <button onclick="window.app.loadDatasetById('students')" class="px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition flex items-center space-x-1.5">
+              <span>🎓 Student Scores</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick KPI Stats Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="glass-card rounded-xl p-4">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>Total Records</span>
+            <i data-lucide="rows" class="w-4 h-4 text-indigo-400"></i>
+          </div>
+          <div id="kpi-rows" class="text-2xl font-bold text-white mt-1">--</div>
+          <div class="text-[11px] text-slate-500 mt-0.5">Sample rows in memory</div>
+        </div>
+
+        <div class="glass-card rounded-xl p-4">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>Features (Cols)</span>
+            <i data-lucide="columns" class="w-4 h-4 text-sky-400"></i>
+          </div>
+          <div id="kpi-cols" class="text-2xl font-bold text-white mt-1">--</div>
+          <div id="kpi-col-types" class="text-[11px] text-slate-500 mt-0.5">-- numeric, -- categorical</div>
+        </div>
+
+        <div class="glass-card rounded-xl p-4">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>Data Health Score</span>
+            <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <div class="flex items-baseline space-x-1.5 mt-1">
+            <span id="kpi-health-score" class="text-2xl font-bold text-emerald-400">--%</span>
+            <span id="kpi-health-status" class="text-xs text-slate-400">Optimal</span>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+            <div id="kpi-health-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 85%"></div>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-xl p-4">
+          <div class="flex items-center justify-between text-slate-400 text-xs">
+            <span>Task Type</span>
+            <i data-lucide="target" class="w-4 h-4 text-amber-400"></i>
+          </div>
+          <div id="kpi-task-type" class="text-xl font-bold text-amber-400 mt-1 capitalize">--</div>
+          <div id="kpi-target-col" class="text-[11px] text-slate-500 mt-0.5 truncate">Target: --</div>
+        </div>
+      </div>
+
+      <!-- Dataset Raw Table Preview -->
+      <div class="glass-panel rounded-xl p-5 border border-slate-800">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-base font-semibold text-white flex items-center space-x-2">
+              <i data-lucide="table" class="w-4 h-4 text-indigo-400"></i>
+              <span>Dataset Preview</span>
+            </h3>
+            <p class="text-xs text-slate-400">Interactive live tabular view of current records</p>
+          </div>
+          <div class="text-xs text-slate-400">Showing first 15 rows</div>
+        </div>
+
+        <div id="data-table-container" class="overflow-x-auto max-h-96 rounded-lg border border-slate-800">
+          <!-- Dynamically populated table -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: AUTOMATED EDA -->
+    <!-- ========================================== -->
+    <section id="tab-eda" class="tab-pane hidden space-y-6">
+      <!-- Section Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+            <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400"></i>
+            <span>Automated Exploratory Data Analysis & AI Insights</span>
+          </h2>
+          <p class="text-xs text-slate-400">Statistical profiling, skewness detection, outliers, and automated heuristics.</p>
+        </div>
+      </div>
+
+      <!-- AI Health Insights Banner Cards -->
+      <div id="eda-insights-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Dynamically generated AI insight cards -->
+      </div>
+
+      <!-- Descriptive Statistics Table -->
+      <div class="glass-panel rounded-xl p-5 border border-slate-800">
+        <h3 class="text-base font-semibold text-white mb-2 flex items-center space-x-2">
+          <i data-lucide="bar-chart" class="w-4 h-4 text-sky-400"></i>
+          <span>Feature Statistical Summary</span>
+        </h3>
+        <p class="text-xs text-slate-400 mb-4">Central tendency, spread, interquartile ranges (IQR), and skewness for numerical variables.</p>
+
+        <div id="eda-stats-table-container" class="overflow-x-auto rounded-lg border border-slate-800">
+          <!-- Dynamically populated stats table -->
+        </div>
+      </div>
+
+      <!-- Correlation Heatmap -->
+      <div class="glass-panel rounded-xl p-5 border border-slate-800">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-semibold text-white flex items-center space-x-2">
+              <i data-lucide="grid" class="w-4 h-4 text-emerald-400"></i>
+              <span>Pearson Correlation Heatmap</span>
+            </h3>
+            <p class="text-xs text-slate-400">Measures linear relationship: +1.0 (positive), 0.0 (independent), -1.0 (negative inverse).</p>
+          </div>
+          <div class="flex items-center space-x-3 text-[11px] text-slate-400">
+            <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-rose-500/80"></span><span>Negative</span></span>
+            <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-slate-800 border border-slate-700"></span><span>Zero</span></span>
+            <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-sky-500/80"></span><span>Positive</span></span>
+          </div>
+        </div>
+
+        <div id="eda-heatmap-container" class="p-2 bg-slate-900/60 rounded-lg border border-slate-800/80">
+          <!-- Dynamically populated correlation matrix -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: VISUAL STUDIO -->
+    <!-- ========================================== -->
+    <section id="tab-visuals" class="tab-pane hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+            <i data-lucide="bar-chart-2" class="w-5 h-5 text-indigo-400"></i>
+            <span>Interactive Visual Studio</span>
+          </h2>
+          <p class="text-xs text-slate-400">Select any feature to visualize distributions or compare two variables in a 2D scatter view.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Feature 1 Distribution Chart -->
+        <div class="glass-panel rounded-xl p-5 border border-slate-800 flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-white">Feature Distribution (Histogram)</h3>
+            <select id="vis-col-select" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+              <!-- Feature options populated dynamically -->
+            </select>
+          </div>
+          <div class="relative h-64 w-full">
+            <canvas id="vis-dist-canvas"></canvas>
+          </div>
+          <div id="vis-dist-details" class="mt-4 p-3 rounded-lg bg-slate-900/60 border border-slate-800/60 text-xs text-slate-300">
+            <!-- Dynamic distribution metrics -->
+          </div>
+        </div>
+
+        <!-- 2D Scatter Relationship Chart -->
+        <div class="glass-panel rounded-xl p-5 border border-slate-800 flex flex-col">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h3 class="text-sm font-semibold text-white">2D Feature Relationship</h3>
+            <div class="flex items-center space-x-2">
+              <select id="vis-scatter-x" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-500"></select>
+              <span class="text-slate-500 text-xs">vs</span>
+              <select id="vis-scatter-y" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-500"></select>
+            </div>
+          </div>
+          <div class="relative h-64 w-full">
+            <canvas id="vis-scatter-canvas"></canvas>
+          </div>
+          <div id="vis-scatter-details" class="mt-4 p-3 rounded-lg bg-slate-900/60 border border-slate-800/60 text-xs text-slate-300 flex items-center justify-between">
+            <span>Pearson correlation between selected axes:</span>
+            <span id="vis-scatter-corr-val" class="font-mono font-bold text-sky-400">0.00</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: MACHINE LEARNING ARENA -->
+    <!-- ========================================== -->
+    <section id="tab-ml" class="tab-pane hidden space-y-6">
+      <!-- Arena Header & Algorithm Switcher -->
+      <div class="glass-panel rounded-2xl p-6 border border-slate-800">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 text-xs font-semibold mb-2">
+              <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+              <span>In-Browser Model Training</span>
+            </div>
+            <h2 class="text-xl font-bold text-white">Machine Learning Training Arena</h2>
+            <p class="text-xs text-slate-400 mt-1">Configure hyperparameters, split train/test sets, and evaluate model performance with live interactive charts.</p>
+          </div>
+
+          <!-- Algorithm Selector Pills -->
+          <div class="flex flex-wrap gap-2">
+            <button id="algo-btn-regression" onclick="window.app.switchMLAlgorithm('regression')" class="algo-selector-btn active px-3.5 py-2 rounded-xl border border-indigo-500/60 bg-indigo-600/20 text-white text-xs font-semibold flex items-center space-x-1.5 transition">
+              <i data-lucide="trending-up" class="w-4 h-4 text-indigo-400"></i>
+              <span>Linear Regression</span>
+            </button>
+            <button id="algo-btn-knn" onclick="window.app.switchMLAlgorithm('knn')" class="algo-selector-btn px-3.5 py-2 rounded-xl border border-slate-700 bg-slate-800/60 text-slate-300 text-xs font-semibold flex items-center space-x-1.5 transition">
+              <i data-lucide="scatter-chart" class="w-4 h-4 text-emerald-400"></i>
+              <span>KNN Classifier</span>
+            </button>
+            <button id="algo-btn-tree" onclick="window.app.switchMLAlgorithm('tree')" class="algo-selector-btn px-3.5 py-2 rounded-xl border border-slate-700 bg-slate-800/60 text-slate-300 text-xs font-semibold flex items-center space-x-1.5 transition">
+              <i data-lucide="git-fork" class="w-4 h-4 text-amber-400"></i>
+              <span>Decision Tree</span>
+            </button>
+            <button id="algo-btn-kmeans" onclick="window.app.switchMLAlgorithm('kmeans')" class="algo-selector-btn px-3.5 py-2 rounded-xl border border-slate-700 bg-slate-800/60 text-slate-300 text-xs font-semibold flex items-center space-x-1.5 transition">
+              <i data-lucide="circle-dot" class="w-4 h-4 text-rose-400"></i>
+              <span>K-Means Clustering</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Hyperparameter Toolbar -->
+        <div class="mt-6 pt-5 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-4 text-xs">
+            <!-- Train / Test Split Slider -->
+            <div id="param-split-container" class="flex items-center space-x-3 bg-slate-900/60 px-3 py-2 rounded-lg border border-slate-800">
+              <span class="text-slate-400">Test Split:</span>
+              <input id="ml-split-slider" type="range" min="10" max="40" step="5" value="25" class="w-24 cursor-pointer" />
+              <span id="ml-split-val" class="font-mono font-bold text-indigo-400">25%</span>
+            </div>
+
+            <!-- KNN K Parameter -->
+            <div id="param-knn-k-container" class="hidden flex items-center space-x-3 bg-slate-900/60 px-3 py-2 rounded-lg border border-slate-800">
+              <span class="text-slate-400">K Neighbors:</span>
+              <input id="ml-k-slider" type="range" min="1" max="15" step="2" value="3" class="w-20 cursor-pointer" />
+              <span id="ml-k-val" class="font-mono font-bold text-emerald-400">3</span>
+            </div>
+
+            <!-- Tree Depth Parameter -->
+            <div id="param-tree-depth-container" class="hidden flex items-center space-x-3 bg-slate-900/60 px-3 py-2 rounded-lg border border-slate-800">
+              <span class="text-slate-400">Max Depth:</span>
+              <input id="ml-depth-slider" type="range" min="1" max="4" step="1" value="3" class="w-20 cursor-pointer" />
+              <span id="ml-depth-val" class="font-mono font-bold text-amber-400">3</span>
+            </div>
+
+            <!-- KMeans Clusters K -->
+            <div id="param-kmeans-k-container" class="hidden flex items-center space-x-3 bg-slate-900/60 px-3 py-2 rounded-lg border border-slate-800">
+              <span class="text-slate-400">Clusters (K):</span>
+              <input id="ml-kmeans-k-slider" type="range" min="2" max="6" step="1" value="3" class="w-20 cursor-pointer" />
+              <span id="ml-kmeans-k-val" class="font-mono font-bold text-rose-400">3</span>
+            </div>
+          </div>
+
+          <!-- Train Button -->
+          <button id="train-model-btn" onclick="window.app.trainActiveModel()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs shadow-lg shadow-indigo-600/30 flex items-center space-x-2 transition transform hover:scale-[1.02]">
+            <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+            <span>Train & Evaluate Model</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ML Metrics Display Area -->
+      <div id="ml-metrics-container" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <!-- Dynamically rendered metrics cards (R2/MSE/Accuracy/F1) -->
+      </div>
+
+      <!-- Model Diagnostic Viewports -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Diagnostic 1: Decision Boundary / Regression Fit / Centroids -->
+        <div class="glass-panel rounded-xl p-5 border border-slate-800 flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h3 id="ml-diag1-title" class="text-sm font-semibold text-white flex items-center space-x-2">
+              <i data-lucide="map" class="w-4 h-4 text-indigo-400"></i>
+              <span>2D Decision Boundary Playground</span>
+            </h3>
+            <span class="text-[11px] text-slate-400">Interactive Canvas</span>
+          </div>
+          <div class="relative w-full h-[360px] bg-slate-950/70 rounded-lg border border-slate-800 flex items-center justify-center overflow-hidden">
+            <canvas id="ml-decision-boundary-canvas" class="w-full h-full"></canvas>
+            <div id="ml-canvas-fallback" class="hidden absolute text-slate-500 text-xs text-center p-4">
+              Train a model to render visualization.
+            </div>
+          </div>
+          <div id="ml-diag1-desc" class="mt-3 text-xs text-slate-400">
+            Shaded regions show the decision boundary partition generated by the classifier.
+          </div>
+        </div>
+
+        <!-- Diagnostic 2: Confusion Matrix / Feature Importance / Tree Rules -->
+        <div class="glass-panel rounded-xl p-5 border border-slate-800 flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h3 id="ml-diag2-title" class="text-sm font-semibold text-white flex items-center space-x-2">
+              <i data-lucide="check-square" class="w-4 h-4 text-emerald-400"></i>
+              <span>Diagnostic Inspector</span>
+            </h3>
+            <span id="ml-diag2-badge" class="px-2 py-0.5 text-[10px] rounded bg-slate-800 text-slate-300 font-mono">Evaluation</span>
+          </div>
+
+          <div id="ml-diag2-content" class="flex-1 bg-slate-950/70 rounded-lg border border-slate-800 p-4 overflow-y-auto max-h-[360px] flex items-center justify-center">
+            <!-- Dynamically populated confusion matrix, tree rules, or weights table -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 5: WHAT-IF SCENARIO SIMULATOR -->
+    <!-- ========================================== -->
+    <section id="tab-simulator" class="tab-pane hidden space-y-6">
+      <div class="glass-panel rounded-2xl p-6 border border-slate-800">
+        <div class="max-w-2xl">
+          <div class="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold mb-2">
+            <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+            <span>Interactive Inference Engine</span>
+          </div>
+          <h2 class="text-xl font-bold text-white">"What-If" Scenario Simulator</h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Adjust the sliders below to simulate hypothetical inputs and watch how your trained machine learning model updates its prediction in real-time.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Input Sliders Panel -->
+        <div class="lg:col-span-2 glass-panel rounded-xl p-6 border border-slate-800 space-y-5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-sm font-semibold text-white">Adjust Feature Parameters</h3>
+            <button onclick="window.app.resetSimulatorInputs()" class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center space-x-1">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              <span>Reset to Means</span>
+            </button>
+          </div>
+
+          <div id="simulator-controls-container" class="space-y-4">
+            <!-- Dynamically generated sliders for each feature -->
+          </div>
+        </div>
+
+        <!-- Real-Time Prediction Gauge Panel -->
+        <div class="glass-panel rounded-xl p-6 border border-slate-800 flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-semibold text-white mb-2 flex items-center space-x-2">
+              <i data-lucide="sparkle" class="w-4 h-4 text-indigo-400"></i>
+              <span>Model Prediction</span>
+            </h3>
+            <p class="text-xs text-slate-400">Live output computed via model weights / decision logic.</p>
+          </div>
+
+          <div class="my-8 text-center">
+            <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Predicted Outcome</div>
+            <div id="sim-predicted-value" class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-sky-300 to-emerald-400">
+              --
+            </div>
+            <div id="sim-predicted-sub" class="text-xs text-slate-400 mt-2">
+              Train a model in the ML Arena to activate simulator.
+            </div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-xs text-slate-400 space-y-1">
+            <div class="flex justify-between">
+              <span>Active Model:</span>
+              <span id="sim-active-model-name" class="text-slate-200 font-medium">Linear Regression</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Target Metric:</span>
+              <span id="sim-target-metric-name" class="text-slate-200 font-medium">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 6: CONCEPTS GUIDE -->
+    <!-- ========================================== -->
+    <section id="tab-guide" class="tab-pane hidden space-y-6">
+      <div class="glass-panel rounded-2xl p-6 border border-slate-800">
+        <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+          <i data-lucide="graduation-cap" class="w-5 h-5 text-indigo-400"></i>
+          <span>AI & Data Science Core Concepts Reference</span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">
+          A clear, beginner-friendly handbook explaining the key mathematical and statistical intuition behind every algorithm used in this application.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Concept 1: Linear Regression & R2 -->
+        <div class="glass-card rounded-xl p-5 border border-slate-800">
+          <div class="flex items-center space-x-2 text-indigo-400 mb-2">
+            <i data-lucide="trending-up" class="w-4 h-4"></i>
+            <h3 class="font-bold text-white text-sm">Linear Regression & R² Score</h3>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Linear Regression models the relationship between independent features \(X\) and continuous target \(y\) via \(y = \beta_0 + \sum \beta_i X_i\).
+          </p>
+          <div class="mt-3 p-2.5 rounded bg-slate-900/70 text-[11px] font-mono text-slate-400">
+            R² (Coefficient of Determination) = 1 - (SS_res / SS_tot). An R² of 0.85 means 85% of variance in the target is explained by the features!
+          </div>
+        </div>
+
+        <!-- Concept 2: KNN -->
+        <div class="glass-card rounded-xl p-5 border border-slate-800">
+          <div class="flex items-center space-x-2 text-emerald-400 mb-2">
+            <i data-lucide="scatter-chart" class="w-4 h-4"></i>
+            <h3 class="font-bold text-white text-sm">K-Nearest Neighbors (KNN)</h3>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            A non-parametric algorithm that classifies a new sample based on the majority vote of its \(K\) nearest data points in Euclidean space: \(d(p, q) = \sqrt{\sum (p_i - q_i)^2}\).
+          </p>
+          <div class="mt-3 p-2.5 rounded bg-slate-900/70 text-[11px] font-mono text-slate-400">
+            Rule of thumb: Scaling features (Standardization) is vital so features with large scales don't dominate the distance metric!
+          </div>
+        </div>
+
+        <!-- Concept 3: Decision Trees -->
+        <div class="glass-card rounded-xl p-5 border border-slate-800">
+          <div class="flex items-center space-x-2 text-amber-400 mb-2">
+            <i data-lucide="git-fork" class="w-4 h-4"></i>
+            <h3 class="font-bold text-white text-sm">Decision Trees & Gini Impurity</h3>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Trees partition the feature space into rectangular regions by maximizing Information Gain. At each split, the algorithm selects the feature and threshold that minimizes Gini Impurity: \(1 - \sum p_i^2\).
+          </p>
+          <div class="mt-3 p-2.5 rounded bg-slate-900/70 text-[11px] font-mono text-slate-400">
+            Gini = 0.0 means a node is completely pure (all samples belong to one class).
+          </div>
+        </div>
+
+        <!-- Concept 4: K-Means Clustering -->
+        <div class="glass-card rounded-xl p-5 border border-slate-800">
+          <div class="flex items-center space-x-2 text-rose-400 mb-2">
+            <i data-lucide="circle-dot" class="w-4 h-4"></i>
+            <h3 class="font-bold text-white text-sm">K-Means Clustering & The Elbow Method</h3>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            An unsupervised learning technique that groups unlabeled observations into \(K\) clusters. It alternates between assigning points to the nearest centroid and recomputing centroids.
+          </p>
+          <div class="mt-3 p-2.5 rounded bg-slate-900/70 text-[11px] font-mono text-slate-400">
+            The "Elbow" on the Inertia plot indicates the point of diminishing returns where adding more clusters no longer reduces variance significantly.
+          </div>
+        </div>
+
+        <!-- Concept 5: Confusion Matrix & Metrics -->
+        <div class="glass-card rounded-xl p-5 border border-slate-800">
+          <div class="flex items-center space-x-2 text-sky-400 mb-2">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+            <h3 class="font-bold text-white text-sm">Precision, Recall & F1-Score</h3>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Accuracy can be misleading when classes are imbalanced. <strong>Precision</strong> measures \(\frac{TP}{TP + FP}\) (quality of positive calls), while <strong>Recall</strong> measures \(\frac{TP}{TP + FN}\) (coverage of actual positives).
+          </p>
+          <div class="mt-3 p-2.5 rounded bg-slate-900/70 text-[11px] font-mono text-slate-400">
+            F1-Score is the harmonic mean: \(2 \times \frac{Precision \times Recall}{Precision + Recall}\).
+          </div>
+        </div>
+
+        <!-- Concept 6: GitHub Deployment -->
+        <div class="glass-card rounded-xl p-5 border border-slate-800">
+          <div class="flex items-center space-x-2 text-purple-400 mb-2">
+            <i data-lucide="globe" class="w-4 h-4"></i>
+            <h3 class="font-bold text-white text-sm">Deploying to GitHub Pages</h3>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Because this application uses browser-native JavaScript and client-side processing, you can deploy it directly to GitHub Pages without paying for servers or configuring cloud build pipelines.
+          </p>
+          <div class="mt-3 p-2.5 rounded bg-slate-900/70 text-[11px] font-mono text-slate-400">
+            1. Push repository to GitHub<br/>
+            2. Go to Settings ➔ Pages ➔ Source: Deploy from branch 'main' ➔ Save!<br/>
+            Your site is immediately live at username.github.io/repo-name!
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- DATASET SWITCHER MODAL -->
+  <div id="dataset-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="glass-panel rounded-2xl max-w-xl w-full p-6 border border-slate-700 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+          <i data-lucide="database" class="w-5 h-5 text-indigo-400"></i>
+          <span>Choose a Benchmark Dataset</span>
+        </h3>
+        <button id="close-dataset-modal-btn" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400">
+        Select a classic data science benchmark to instantly populate exploratory views and models:
+      </p>
+
+      <div class="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto pr-1">
+        <div onclick="window.app.loadDatasetById('titanic'); window.app.closeDatasetModal();" class="glass-card p-3.5 rounded-xl cursor-pointer hover:border-indigo-500 transition flex items-center justify-between">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-sm font-bold text-white">🚢 Titanic Passenger Survival</span>
+              <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold">Classification</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Predict survival based on age, fare, ticket class, and family size.</p>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+        </div>
+
+        <div onclick="window.app.loadDatasetById('housing'); window.app.closeDatasetModal();" class="glass-card p-3.5 rounded-xl cursor-pointer hover:border-indigo-500 transition flex items-center justify-between">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-sm font-bold text-white">🏡 Real Estate House Prices</span>
+              <span class="px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-400 font-semibold">Regression</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Predict price ($K) using square footage, bedrooms, age, and city distance.</p>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+        </div>
+
+        <div onclick="window.app.loadDatasetById('churn'); window.app.closeDatasetModal();" class="glass-card p-3.5 rounded-xl cursor-pointer hover:border-indigo-500 transition flex items-center justify-between">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-sm font-bold text-white">👥 Customer Churn Analysis</span>
+              <span class="px-2 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-400 font-semibold">Classification</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Predict customer cancellation from tenure, monthly charges, and contracts.</p>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+        </div>
+
+        <div onclick="window.app.loadDatasetById('iris'); window.app.closeDatasetModal();" class="glass-card p-3.5 rounded-xl cursor-pointer hover:border-indigo-500 transition flex items-center justify-between">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-sm font-bold text-white">🌸 Iris Flower Species</span>
+              <span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-400 font-semibold">Classification / Clusters</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Multi-class flower species classification from sepal & petal geometry.</p>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+        </div>
+
+        <div onclick="window.app.loadDatasetById('students'); window.app.closeDatasetModal();" class="glass-card p-3.5 rounded-xl cursor-pointer hover:border-indigo-500 transition flex items-center justify-between">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-sm font-bold text-white">🎓 Student Exam Performance</span>
+              <span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-400 font-semibold">Regression</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Predict exam score from weekly study hours, attendance rate, and sleep.</p>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs shadow-xl flex items-center space-x-2">
+      <i id="toast-icon" data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+      <span id="toast-message">Notification</span>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-800/60 bg-[#090d16] py-6 text-xs text-slate-500 text-center">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center space-x-2">
+        <span class="font-semibold text-slate-400">DataMind Studio</span>
+        <span>•</span>
+        <span>Open Source AI & Data Science Web Application</span>
+      </div>
+      <div>
+        Ready to deploy on <span class="text-slate-300 font-medium">GitHub Pages</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Scripts -->
+  <script src="js/datasets.js"></script>
+  <script src="js/data-engine.js"></script>
+  <script src="js/ml-engine.js"></script>
+  <script src="js/chart-engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
